@@ -2,12 +2,13 @@
  * Service Worker – Gulfport Store Walk Checklist v2
  * Caches core assets for offline use after first successful load.
  */
-const CACHE_NAME = "gp-storewalk-v2";
+const CACHE_NAME = "gp-storewalk-v2.1";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/styles.css",
   "./js/config.js",
+  "./js/checklist-data.js",
   "./js/storage.js",
   "./js/api.js",
   "./js/report.js",
