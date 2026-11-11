@@ -600,3 +600,45 @@ button:disabled {
   .response-group { gap: 0.6rem; }
   .response-btn { font-size: 0.95rem; }
 }
+
+
+/* History / Admin lists */
+.list-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.list-card h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.list-card .meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.filter-row input,
+.filter-row select {
+  margin-bottom: 0;
+  min-height: 44px;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem 1rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}

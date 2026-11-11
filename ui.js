@@ -152,13 +152,30 @@
         )
       );
 
+      root.appendChild(
+        el("button", {
+          type: "button",
+          className: "btn btn-secondary btn-block",
+          text: "Local History",
+          onClick: () => handlers.onHistory && handlers.onHistory(),
+        })
+      );
+      root.appendChild(
+        el("button", {
+          type: "button",
+          className: "btn btn-secondary btn-block",
+          text: "Admin / Reporting",
+          onClick: () => handlers.onAdmin && handlers.onAdmin(),
+        })
+      );
+
       // Mode indicator
       const mode = global.GPApi && global.GPApi.isMock() ? "Mock API (local testing)" : "Live API";
       root.appendChild(
         el("p", {
           className: "center mt-2",
           style: { color: "var(--text-muted)", fontSize: "0.8rem" },
-          text: "Mode: " + mode,
+          text: "Mode: " + mode + " · v" + ((global.GPConfig && global.GPConfig.APP_VERSION) || ""),
         })
       );
     },
@@ -477,6 +494,212 @@
         })
       );
     },
+
+    renderHistoryScreen(root, records, handlers) {
+      clear(root);
+      root.appendChild(el("h1", { text: "Local History" }));
+      root.appendChild(
+        el("p", {
+          className: "center mb-2",
+          style: { color: "var(--text-muted)", fontSize: "0.9rem" },
+          text: "Walks saved on this device (drafts, queue, and submitted).",
+        })
+      );
+      if (!records || !records.length) {
+        root.appendChild(
+          el("div", {
+            className: "empty-state",
+            text: "No local history yet. Complete a walk to see it here.",
+          })
+        );
+      } else {
+        records.forEach((r) => {
+          const card = el("div", { className: "list-card" });
+          card.appendChild(el("h3", { text: r.id }));
+          const meta = el("div", { className: "meta" });
+          meta.appendChild(statusBadge(r.status || "draft"));
+          meta.appendChild(
+            document.createTextNode(
+              " · " +
+                (r.role || "") +
+                " · " +
+                (r.managerName || "") +
+                " · " +
+                (r.dateDisplay || r.dateISO || "")
+            )
+          );
+          card.appendChild(meta);
+          if (r.openIssuesAtCompletion) {
+            card.appendChild(
+              el("p", {
+                className: "meta",
+                text: "Open issues at completion: " + r.openIssuesAtCompletion,
+              })
+            );
+          }
+          card.appendChild(
+            el("button", {
+              type: "button",
+              className: "btn btn-secondary btn-block mt-1",
+              text: "Open",
+              onClick: () => handlers.onOpen && handlers.onOpen(r),
+            })
+          );
+          root.appendChild(card);
+        });
+      }
+      root.appendChild(
+        el("button", {
+          type: "button",
+          className: "btn btn-secondary btn-block mt-2",
+          text: "Back",
+          onClick: handlers.onBack,
+        })
+      );
+    },
+
+    renderAdminScreen(root, state, handlers) {
+      clear(root);
+      root.appendChild(el("h1", { text: "Admin / Reporting" }));
+      root.appendChild(
+        el("p", {
+          className: "center mb-2",
+          style: { color: "var(--text-muted)", fontSize: "0.9rem" },
+          text: state.sourceLabel || "Central records (API or mock)",
+        })
+      );
+
+      const filters = el("div", { className: "filter-row" });
+      const fromInput = el("input", {
+        type: "text",
+        id: "admin-from",
+        placeholder: "From YYYY-MM-DD",
+        value: (state.query && state.query.fromDate) || "",
+      });
+      const toInput = el("input", {
+        type: "text",
+        id: "admin-to",
+        placeholder: "To YYYY-MM-DD",
+        value: (state.query && state.query.toDate) || "",
+      });
+      const typeSel = el("select", { id: "admin-type" });
+      [["", "All types"], ["opening", "Opening"], ["closing", "Closing"]].forEach(([v, t]) => {
+        const o = el("option", { value: v, text: t });
+        if (state.query && state.query.type === v) o.selected = true;
+        typeSel.appendChild(o);
+      });
+      const mgrInput = el("input", {
+        type: "text",
+        id: "admin-manager",
+        placeholder: "Manager contains…",
+        value: (state.query && state.query.manager) || "",
+      });
+      filters.appendChild(fromInput);
+      filters.appendChild(toInput);
+      filters.appendChild(typeSel);
+      filters.appendChild(mgrInput);
+      root.appendChild(filters);
+
+      root.appendChild(
+        el("button", {
+          type: "button",
+          className: "btn btn-primary btn-block",
+          text: "Apply Filters",
+          onClick: () => {
+            handlers.onFilter &&
+              handlers.onFilter({
+                fromDate: fromInput.value.trim(),
+                toDate: toInput.value.trim(),
+                type: typeSel.value,
+                manager: mgrInput.value.trim(),
+              });
+          },
+        })
+      );
+
+      root.appendChild(
+        el("button", {
+          type: "button",
+          className: "btn btn-secondary btn-block",
+          text: "Open Issues Only",
+          onClick: () => handlers.onOpenIssues && handlers.onOpenIssues(),
+        })
+      );
+
+      if (state.error) {
+        root.appendChild(
+          el("div", { className: "warning-box", text: state.error })
+        );
+      }
+
+      const list = state.records || [];
+      if (!list.length && !state.error) {
+        root.appendChild(
+          el("div", {
+            className: "empty-state",
+            text: "No records match. Submit a walk or adjust filters.",
+          })
+        );
+      }
+      list.forEach((r) => {
+        const card = el("div", { className: "list-card" });
+        card.appendChild(el("h3", { text: r.id || r.centralId || "(record)" }));
+        const meta = el("div", { className: "meta" });
+        meta.appendChild(statusBadge(r.status || "submitted"));
+        meta.appendChild(
+          document.createTextNode(
+            " · " +
+              (r.role || r.type || "") +
+              " · " +
+              (r.managerName || "") +
+              " · " +
+              (r.dateISO || "")
+          )
+        );
+        card.appendChild(meta);
+        const openCount =
+          r.openIssuesAtCompletion != null
+            ? r.openIssuesAtCompletion
+            : (r.reporting && r.reporting.openIssueCount) || 0;
+        card.appendChild(
+          el("p", { className: "meta", text: "Open issues: " + openCount })
+        );
+        root.appendChild(card);
+      });
+
+      if (state.issues && state.issues.length) {
+        root.appendChild(el("h2", { text: "Open Issues", className: "mt-2" }));
+        state.issues.forEach((iss) => {
+          const card = el("div", { className: "list-card" });
+          card.appendChild(
+            el("h3", { text: (iss.recordId || "") + " / " + (iss.itemId || "") })
+          );
+          card.appendChild(
+            el("p", {
+              className: "meta",
+              text:
+                (iss.managerName || "") +
+                " · " +
+                (iss.status || "") +
+                " · " +
+                (iss.remarks || ""),
+            })
+          );
+          root.appendChild(card);
+        });
+      }
+
+      root.appendChild(
+        el("button", {
+          type: "button",
+          className: "btn btn-secondary btn-block mt-2",
+          text: "Back",
+          onClick: handlers.onBack,
+        })
+      );
+    },
+
+
   };
 
   function escapeHtml(str) {

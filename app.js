@@ -346,11 +346,105 @@
     }
     currentRecord = null;
     const startRoot = document.getElementById("screen-start");
-    UI.renderStartScreen(startRoot, { onStart: startWalk });
+    UI.renderStartScreen(startRoot, { onStart: startWalk, onHistory: showHistory, onAdmin: showAdmin });
     UI.showScreen("start");
   }
 
-  function resumeDraftIfAny() {
+
+  function collectLocalRecords() {
+    const map = {};
+    const hist = Storage.getHistory() || [];
+    hist.forEach((r) => {
+      if (r && r.id) map[r.id] = r;
+    });
+    const q = Storage.getQueue() || [];
+    q.forEach((r) => {
+      if (r && r.id) map[r.id] = r;
+    });
+    const draft = Storage.getDraft();
+    if (draft && draft.id) map[draft.id] = draft;
+    return Object.values(map).sort((a, b) =>
+      String(b.updatedAt || b.completedAt || b.startedAt || "").localeCompare(
+        String(a.updatedAt || a.completedAt || a.startedAt || "")
+      )
+    );
+  }
+
+  function showHistory() {
+    const records = collectLocalRecords();
+    UI.renderHistoryScreen(document.getElementById("screen-history"), records, {
+      onBack: () => {
+        const startRoot = document.getElementById("screen-start");
+        UI.renderStartScreen(startRoot, {
+          onStart: startWalk,
+          onHistory: showHistory,
+          onAdmin: showAdmin,
+        });
+        UI.showScreen("start");
+      },
+      onOpen: (r) => {
+        currentRecord = r;
+        if (
+          r.status === "submitted" ||
+          r.status === "offline_pending" ||
+          r.status === "submission_failed"
+        ) {
+          showReportScreen();
+        } else {
+          showChecklistScreen();
+        }
+      },
+    });
+    UI.showScreen("history");
+  }
+
+  async function showAdmin(query) {
+    query = query || {};
+    const state = {
+      query: query,
+      records: [],
+      issues: [],
+      error: null,
+      sourceLabel: API.isMock() ? "Mock store (this device)" : "Central API",
+    };
+    try {
+      const res = await API.listChecklists(query);
+      if (res.ok) state.records = res.data || [];
+      else state.error = res.error || "Failed to load records";
+    } catch (e) {
+      state.error = e.message || "Failed to load records";
+    }
+    UI.renderAdminScreen(document.getElementById("screen-admin"), state, {
+      onBack: () => {
+        const startRoot = document.getElementById("screen-start");
+        UI.renderStartScreen(startRoot, {
+          onStart: startWalk,
+          onHistory: showHistory,
+          onAdmin: showAdmin,
+        });
+        UI.showScreen("start");
+      },
+      onFilter: (q) => showAdmin(q),
+      onOpenIssues: async () => {
+        try {
+          const res = await API.getIssues({ status: "open" });
+          state.issues = res.ok ? res.data || [] : [];
+          if (!res.ok) state.error = res.error || "Failed to load issues";
+          state.records = state.records || [];
+          UI.renderAdminScreen(document.getElementById("screen-admin"), state, {
+            onBack: () => UI.showScreen("start"),
+            onFilter: (q) => showAdmin(q),
+            onOpenIssues: () => showAdmin(query),
+          });
+        } catch (e) {
+          alert(e.message || "Issues request failed");
+        }
+      },
+    });
+    UI.showScreen("admin");
+  }
+
+    function resumeDraftIfAny() {
     const draft = Storage.getDraft();
     if (!draft) return false;
     const itemCount = Report.getAllItems(draft.role, checklistConfig).length;
@@ -446,7 +540,7 @@
           return;
         }
         const startRoot = document.getElementById("screen-start");
-        UI.renderStartScreen(startRoot, { onStart: startWalk });
+        UI.renderStartScreen(startRoot, { onStart: startWalk, onHistory: showHistory, onAdmin: showAdmin });
         UI.showScreen("start");
       });
     }
@@ -486,7 +580,7 @@
     if (navigator.onLine) processQueue();
 
     const startRoot = document.getElementById("screen-start");
-    UI.renderStartScreen(startRoot, { onStart: startWalk });
+    UI.renderStartScreen(startRoot, { onStart: startWalk, onHistory: showHistory, onAdmin: showAdmin });
 
     const sectionCount = (checklistConfig && checklistConfig.sections && checklistConfig.sections.length) || 0;
     console.log("[GP Store Walk] sections loaded:", sectionCount, "mock:", API.isMock());
