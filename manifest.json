@@ -1,0 +1,19 @@
+{
+  "name": "Gulfport Store Walk Checklist",
+  "short_name": "GP Store Walk",
+  "description": "Opening and Closing Manager store walk checklist for Gulfport. Works offline after first load.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f1419",
+  "theme_color": "#0f1419",
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%233b82f6' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='62' font-size='48' text-anchor='middle' fill='white' font-family='system-ui'%3EGP%3C/text%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

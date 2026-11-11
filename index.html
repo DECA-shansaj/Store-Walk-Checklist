@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <meta name="description" content="Gulfport Store Walk Checklist – Opening and Closing Manager store walk tool (offline-capable)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Gulfport Store Walk Checklist</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="offline-banner" role="status" aria-live="polite"></div>
+
+  <div id="app">
+    <!-- ========== START SCREEN ========== -->
+    <section id="screen-start" class="screen active" aria-label="Start">
+      <h1>Gulfport Store Walk Checklist</h1>
+
+      <div class="warning-box" role="note">
+        <strong>Privacy &amp; Security Warning</strong>
+        <span data-warning></span>
+      </div>
+
+      <div class="mt-2">
+        <label for="manager-name">Manager Name <span class="req">*</span></label>
+        <input
+          type="text"
+          id="manager-name"
+          name="manager-name"
+          autocomplete="name"
+          placeholder="Enter your name"
+          maxlength="80"
+          required
+          aria-required="true"
+        />
+      </div>
+
+      <p class="center text-muted mb-2" style="color: var(--text-muted); font-size: 0.95rem;">
+        Select your role to begin. Date and start time will be recorded automatically.
+      </p>
+
+      <button type="button" id="btn-opening" class="role-btn" aria-label="Start as Opening Manager">
+        <span class="role-icon" aria-hidden="true">🌅</span>
+        <span>Opening Manager</span>
+      </button>
+
+      <button type="button" id="btn-closing" class="role-btn" aria-label="Start as Closing Manager">
+        <span class="role-icon" aria-hidden="true">🌙</span>
+        <span>Closing Manager</span>
+      </button>
+    </section>
+
+    <!-- ========== CHECKLIST SCREEN ========== -->
+    <section id="screen-checklist" class="screen" aria-label="Checklist">
+      <h1>Store Walk</h1>
+
+      <div class="meta-bar" aria-label="Walk details">
+        <dl>
+          <dt>Record ID</dt>
+          <dd id="meta-id">—</dd>
+          <dt>Role</dt>
+          <dd id="meta-role">—</dd>
+          <dt>Manager</dt>
+          <dd id="meta-name">—</dd>
+          <dt>Date</dt>
+          <dd id="meta-date">—</dd>
+          <dt>Start</dt>
+          <dd id="meta-start">—</dd>
+        </dl>
+      </div>
+
+      <div class="progress-panel" aria-live="polite">
+        <div class="progress-row">
+          <span>Progress: <strong id="progress-label">0 / 0 (0%)</strong></span>
+          <span>Open issues: <strong id="open-issues-count" class="open-issues zero">0</strong></span>
+        </div>
+        <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="progress-fill" class="progress-bar-fill"></div>
+        </div>
+      </div>
+
+      <div class="warning-box" role="note" style="font-size: 0.85rem;">
+        <strong>Reminder</strong>
+        <span data-warning></span>
+      </div>
+
+      <div id="checklist-container">
+        <!-- Sections rendered by JS -->
+      </div>
+
+      <div class="cert-box">
+        <label>
+          <input type="checkbox" id="cert-checkbox" />
+          <span>
+            I certify that I completed this store walk to the best of my ability and that the responses above are accurate.
+            Open issues (if any) have been noted and do not prevent submission.
+          </span>
+        </label>
+      </div>
+
+      <div style="height: 5.5rem;" aria-hidden="true"></div>
+
+      <div class="action-bar">
+        <div class="btn-row">
+          <button type="button" id="btn-back-start" class="btn btn-secondary">Back</button>
+          <button type="button" id="btn-complete" class="btn btn-success" disabled>Complete &amp; Report</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== REPORT SCREEN ========== -->
+    <section id="screen-report" class="screen" aria-label="Report">
+      <h1>Walk Complete</h1>
+      <p class="center" style="color: var(--text-muted);">
+        Report generated. You may copy it or print / save as PDF.
+      </p>
+
+      <div id="report-text" class="report-box" role="textbox" aria-readonly="true" tabindex="0"></div>
+
+      <div class="btn-row mt-2">
+        <button type="button" id="btn-copy-report" class="btn btn-primary">Copy Report</button>
+        <button type="button" id="btn-print-report" class="btn btn-secondary">Print / Save PDF</button>
+      </div>
+
+      <button type="button" id="btn-new-walk" class="btn btn-secondary btn-block mt-2">Start New Walk</button>
+    </section>
+  </div>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>
