@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <meta name="description" content="Gulfport Store Walk Checklist – offline-capable PWA with centralized record submission" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Gulfport Store Walk Checklist</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="offline-banner" role="status" aria-live="polite"></div>
+
+  <div id="app">
+    <!-- Screens are largely populated by JS (ui.js) for flexibility -->
+    <section id="screen-start" class="screen active" aria-label="Start"></section>
+
+    <section id="screen-checklist" class="screen" aria-label="Checklist">
+      <h1>Store Walk</h1>
+      <div id="meta-bar" class="meta-bar" aria-label="Walk details"></div>
+
+      <div class="progress-panel" aria-live="polite">
+        <div class="progress-row">
+          <span>Progress: <strong id="progress-label">0 / 0 (0%)</strong></span>
+          <span>Open issues: <strong id="open-issues-count" class="open-issues zero">0</strong></span>
+        </div>
+        <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+          <div id="progress-fill" class="progress-bar-fill"></div>
+        </div>
+      </div>
+
+      <div class="warning-box" role="note" style="font-size: 0.85rem;">
+        <strong>Reminder</strong>
+        <span>Do not enter personal information beyond the required manager name. Do not enter CUI, customer information, cash amounts, sensitive incident details, employee disciplinary information, or unnecessary personal information.</span>
+      </div>
+
+      <div id="checklist-container"></div>
+
+      <div class="cert-box">
+        <label>
+          <input type="checkbox" id="cert-checkbox" />
+          <span>
+            I certify that I completed this store walk to the best of my ability and that the responses above are accurate.
+            Open issues (if any) have been noted and do not prevent submission.
+          </span>
+        </label>
+      </div>
+
+      <div style="height: 5.5rem;" aria-hidden="true"></div>
+
+      <div class="action-bar">
+        <div class="btn-row">
+          <button type="button" id="btn-back-start" class="btn btn-secondary">Back</button>
+          <button type="button" id="btn-complete" class="btn btn-success" disabled>Complete &amp; Submit</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-report" class="screen" aria-label="Report"></section>
+  </div>
+
+  <!-- Order matters: config → storage → api → report → ui → app -->
+  <script src="config.js"></script>
+  <script src="checklist-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="report.js"></script>
+  <script src="ui.js"></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
