@@ -1,7 +1,7 @@
 {
   "name": "Gulfport Store Walk Checklist",
   "short_name": "GP Store Walk",
-  "description": "Opening and Closing Manager store walk checklist for Gulfport. Works offline after first load.",
+  "description": "Opening and Closing Manager store walk checklist. Offline-capable with centralized submission.",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait-primary",

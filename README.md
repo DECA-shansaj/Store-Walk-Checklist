@@ -1,133 +1,191 @@
-# Gulfport Store Walk Checklist
+# Gulfport Store Walk Checklist (v2)
 
-Mobile-first Progressive Web App for Opening and Closing Managers to complete a full store walk checklist.
+Mobile-first Progressive Web App for Opening and Closing Managers.
 
-**Built with:** Plain HTML, CSS, and vanilla JavaScript  
-**No backend • No database • No login • Works offline after first load**
-
----
-
-## Quick Start (for users)
-
-1. Open the app in a modern mobile or desktop browser.
-2. Enter your **Manager Name**.
-3. Tap **Opening Manager** or **Closing Manager**.
-4. Complete every checklist item (Pass / Issue Found / N/A).
-5. Check the certification box.
-6. Tap **Complete & Report**.
-7. Copy the report or use **Print / Save as PDF**.
-
-The app automatically saves a draft after every change and works offline once it has been loaded once while online.
+**Stack:** Plain HTML, CSS, vanilla JavaScript  
+**No hard-coded secrets, API keys, passwords, or cloud-provider lock-in**
 
 ---
 
-## Privacy Warning (shown in the app)
+## Features
+
+- Opening and Closing Manager walks (closing adds end-of-day items)
+- Pass / Issue Found / N/A with required remarks, actions, and issue status
+- Local draft auto-save after every change
+- Offline support via Service Worker
+- **Central submission** through a generic backend API
+- Offline submission **queue** with automatic retry
+- Clear record statuses: **Draft**, **Offline Pending**, **Submission Failed**, **Submitted**
+- Local record retained until central submission is confirmed
+- Submitted records are **immutable** in the client
+- Mock API mode for UI testing without a backend
+- Administrator-oriented reporting payload (for central analytics / email)
+
+---
+
+## Privacy warning (shown in app)
 
 > Do not enter personal information beyond the required manager name.  
 > Do not enter CUI, customer information, cash amounts, sensitive incident details, employee disciplinary information, or unnecessary personal information.
 
 ---
 
-## Project Structure
+## Project structure
 
 ```
 gulfport-store-walk/
-├── index.html              ← Main app page
-├── manifest.json           ← Makes it installable as a PWA
-├── service-worker.js       ← Enables offline use
-├── css/
-│   └── styles.css
+├── index.html
+├── manifest.json
+├── service-worker.js
+├── css/styles.css
 ├── js/
-│   └── app.js
-├── data/
-│   └── checklist.json      ← All checklist questions live here
+│   ├── config.js      ← API base URL, mock flag, notify email target
+│   ├── storage.js     ← drafts, queue, history, mock DB
+│   ├── api.js         ← service interface + mock + real fetch
+│   ├── report.js      ← plain-text report builder
+│   ├── ui.js          ← code-driven screen rendering
+│   └── app.js         ← orchestration
+├── data/checklist.json
 ├── .gitignore
-└── README.md               ← This file
+└── README.md
 ```
 
 ---
 
-## How to Put This on GitHub (Beginner Guide)
+## Configuration (`js/config.js`)
 
-You have **three easy options**. Choose the one that feels most comfortable.
+| Setting | Purpose |
+|--------|---------|
+| `MOCK_API` | `true` = local mock backend (default for testing). `false` = real HTTP API |
+| `API_BASE_URL` | Origin of your backend (e.g. `https://api.example.mil/store-walk`). Empty = same origin |
+| `ENDPOINTS.*` | Path templates for the service interface |
+| `REPORT_NOTIFY_EMAIL` | Address the **backend** should email PDF reports to |
 
-### Option 1: Upload files using the GitHub website (easiest – no software needed)
+**No API keys, tokens, SMTP passwords, or credentials belong in this file or anywhere in the client.**
 
-1. Go to [https://github.com](https://github.com) and sign in (or create a free account).
-2. Click the **+** in the top-right → **New repository**.
-3. Fill in:
-   - **Repository name:** `gulfport-store-walk` (or any name you like)
-   - Description: `Gulfport Store Walk Checklist PWA`
-   - Keep it **Public** (recommended) or Private.
-   - **Do NOT** check “Add a README” (we already have one).
-4. Click **Create repository**.
-5. On the next page, click **uploading an existing file**.
-6. Drag and drop **all the files and folders** from this project into the browser window  
-   (or click “choose your files” and select everything).
-7. Scroll down, type a short message like `Initial upload`, and click **Commit changes**.
+Default notification target (backend responsibility):
 
-Done! Your code is now on GitHub.
+`deca.lee.store-ops-grp.list.websitez09gulfport@mail.mil`
 
-### Option 2: Use GitHub Desktop (recommended if you will make changes later)
+The client includes this address in the submission payload as `notifyEmail` and sets `requestPdfEmail: true`. The backend must generate the PDF and send the message. The browser never talks to a mail server.
 
-1. Download and install [GitHub Desktop](https://desktop.github.com/).
-2. Sign in with your GitHub account.
-3. Click **File → Add Local Repository → Create a New Repository**.
-4. Choose the folder that contains these files and create it.
-5. Click **Publish repository** (keep “Keep this code private” unchecked if you want it public).
+---
 
-### Option 3: Command line (if you already know a little Git)
+## API service interface
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/api/checklists` | Create / submit completed checklist |
+| `GET` | `/api/checklists/{recordId}` | Fetch one record |
+| `GET` | `/api/checklists?fromDate=&toDate=&type=&manager=&issueStatus=` | Admin list / filter |
+| `POST` | `/api/checklists/{recordId}/sync` | Re-sync / idempotent upsert |
+| `GET` | `/api/checklist-config` | Server-provided checklist definition (optional) |
+| `GET` | `/api/issues?status=open` | Open issues feed for administrators |
+
+### Submission payload (administrator-ready)
+
+```json
+{
+  "id": "GP-YYYYMMDD-XXXX",
+  "role": "opening|closing",
+  "type": "opening|closing",
+  "managerName": "string",
+  "dateISO": "YYYY-MM-DD",
+  "startTime": "string",
+  "endTime": "string",
+  "completedAt": "ISO-8601",
+  "certified": true,
+  "responses": { "...": {} },
+  "openIssuesAtCompletion": 0,
+  "reportText": "plain text report",
+  "appVersion": "2.0.0",
+  "notifyEmail": "deca.lee.store-ops-grp.list.websitez09gulfport@mail.mil",
+  "requestPdfEmail": true,
+  "reporting": {
+    "store": "Gulfport",
+    "walkType": "opening|closing",
+    "completionPercent": 100,
+    "openIssueCount": 0,
+    "issueSummary": []
+  }
+}
+```
+
+Backend should:
+
+1. Persist the record immutably (or version it).
+2. Generate a PDF from `reportText` / structured fields.
+3. Email the PDF to `notifyEmail` (or the configured distribution list).
+4. Return `{ centralId, submittedAt, ... }` so the client can mark **Submitted**.
+
+---
+
+## Offline queue behavior
+
+1. User completes and certifies a walk.
+2. If offline → status **Offline Pending**, record added to local queue. **Not deleted.**
+3. When connectivity returns → automatic retry (also on an interval).
+4. On HTTP success → status **Submitted**, removed from queue, UI locked.
+5. On failure → status **Submission Failed**, kept in queue for retry (max attempts configurable).
+6. User can tap **Retry Submit Now** on the report screen.
+
+---
+
+## Mock API mode
+
+`js/config.js` → `MOCK_API: true` (default).
+
+- No network required for submission testing.
+- “Server” data stored in `localStorage` under `gp_sw_mock_db`.
+- Simulates PDF email note in the response.
+- Switch to `MOCK_API: false` and set `API_BASE_URL` when a real backend is available.
+
+---
+
+## Backend security assumptions & deployment dependencies
+
+**Assumptions (client does not implement these):**
+
+1. **Transport:** All production traffic is HTTPS (or equivalent protected channel).
+2. **Authentication / authorization:** Handled outside the static app — e.g. reverse-proxy SSO, mutual TLS, device certificates, or network-only access on an intranet. The client uses `credentials: "same-origin"` and does not store tokens.
+3. **Input validation:** Backend must validate and sanitize all fields; client validation is UX-only.
+4. **Immutability:** Once accepted, central records should not be silently altered; use append-only or explicit versioning.
+5. **Email:** Backend owns SMTP / enterprise mail relay credentials. Client only supplies the destination address and report content.
+6. **PII / CUI:** Operators are instructed not to enter sensitive data. Backend logging and retention policies remain the hosting organization’s responsibility.
+7. **CORS / CSP:** If the API is on another origin, configure CORS allow-lists and Content-Security-Policy appropriately.
+8. **Idempotency:** `POST /api/checklists` and `/sync` should tolerate duplicate submissions of the same `id`.
+
+**Deployment dependencies:**
+
+- Static hosting for the PWA (GitHub Pages, internal web server, etc.).
+- A backend implementing the endpoints above (any language/stack).
+- Optional: enterprise mail relay for PDF delivery to the distribution list.
+- Service Worker requires HTTPS (or localhost).
+
+---
+
+## GitHub upload (beginner)
+
+1. Create a new repository on GitHub (do **not** auto-add a README).
+2. Upload the contents of this folder (or the provided zip).
+3. **Settings → Pages** → Deploy from branch `main` / root → Save.
+4. Open the Pages URL on a phone once while online to cache the app.
+
+---
+
+## Local testing
+
+Serve over HTTP (Service Worker needs a real origin):
 
 ```bash
-cd gulfport-store-walk
-git init
-git add .
-git commit -m "Initial commit – Gulfport Store Walk Checklist"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/gulfport-store-walk.git
-git push -u origin main
+npx serve .
+# or any static file server
 ```
 
-Replace `YOUR-USERNAME` with your actual GitHub username.
-
----
-
-## How to Host It for Free with GitHub Pages (so people can open it on their phones)
-
-After the code is on GitHub:
-
-1. Go to your repository on GitHub.
-2. Click **Settings** → **Pages** (left sidebar).
-3. Under **Source**, select **Deploy from a branch**.
-4. Branch: `main` → folder: `/ (root)` → click **Save**.
-5. Wait 1–2 minutes. GitHub will give you a link that looks like:  
-   `https://YOUR-USERNAME.github.io/gulfport-store-walk/`
-
-Open that link on a phone or computer. The first time it loads while online, the Service Worker caches everything so it works offline afterward.
-
-> **Important:** Service Workers only work on `https://` or `localhost`. GitHub Pages gives you HTTPS automatically – perfect.
-
----
-
-## Making Changes Later
-
-- Edit `data/checklist.json` to change the questions or add new sections.
-- Edit `css/styles.css` for appearance.
-- Edit `js/app.js` for behavior.
-
-After changing files, commit and push them to GitHub (or re-upload via the website). GitHub Pages will update automatically within a minute or two.
-
----
-
-## Testing Offline
-
-1. Open the live GitHub Pages link while online.
-2. Turn on Airplane Mode (or DevTools → Network → Offline).
-3. Refresh the page – the app should still load and show the offline banner.
+Complete a walk with `MOCK_API: true` to exercise submit, queue, and status badges.
 
 ---
 
 ## License
 
-This project is provided as-is for internal store use.  
-You may adapt it for your own locations.
+Provided as-is for internal store operations use.

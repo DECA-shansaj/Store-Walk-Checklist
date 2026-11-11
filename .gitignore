@@ -1,19 +1,12 @@
-# OS files
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# Editor / IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# Logs
 *.log
 npm-debug.log*
-
-# Optional local overrides
 .env
 .env.local
