@@ -40,6 +40,7 @@
     const map = {
       draft: { label: "Draft", cls: "badge-draft" },
       offline_pending: { label: "Offline Pending", cls: "badge-pending" },
+      syncing: { label: "Syncing", cls: "badge-pending" },
       submission_failed: { label: "Submission Failed", cls: "badge-failed" },
       submitted: { label: "Submitted", cls: "badge-submitted" },
     };

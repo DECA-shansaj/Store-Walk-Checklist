@@ -1,20 +1,16 @@
 /**
- * Application configuration
- * ---------------------------------------------------------
- * Leave MOCK_API true until IT provides an approved API host. Then set MOCK_API false and API_BASE_URL.
- * No secrets, API keys, tokens, or SMTP passwords belong here.
+ * Application configuration — client only.
+ * MOCK_API stays true until IT provides an approved API host.
+ * No secrets, API keys, tokens, passwords, or live mail credentials.
  */
 (function (global) {
   "use strict";
 
   const Config = {
-    // true = in-browser mock (no server needed)
-    // false = call real backend at API_BASE_URL
     MOCK_API: true,
 
-    // Example local: "http://localhost:3080"
-    // Example hosted: "https://api.example.mil/store-walk"
-    API_BASE_URL: "", // e.g. "https://approved-api.example.mil"
+    // Set only when IT provides an approved API origin (https://...)
+    API_BASE_URL: "",
 
     ENDPOINTS: {
       CHECKLISTS: "/api/checklists",
@@ -25,8 +21,13 @@
       HEALTH: "/api/health",
     },
 
-    REPORT_NOTIFY_EMAIL:
-      "deca.lee.store-ops-grp.list.websitez09gulfport@mail.mil",
+    /**
+     * Optional future notify target for a real backend only.
+     * Left empty on purpose for pre-IT / mock mode so the client
+     * does not embed a distribution address as an active dependency.
+     * Populate only under IT direction for production backend deploy.
+     */
+    REPORT_NOTIFY_EMAIL: "",
 
     STORAGE: {
       DRAFT: "gp_sw_draft",
@@ -39,7 +40,7 @@
     QUEUE_MAX_ATTEMPTS: 8,
 
     APP_NAME: "Gulfport Store Walk Checklist",
-    APP_VERSION: "2.1.0",
+    APP_VERSION: "2.2.0",
   };
 
   global.GPConfig = Config;

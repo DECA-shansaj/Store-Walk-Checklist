@@ -14,6 +14,7 @@
   let checklistConfig = null;
   let currentRecord = null;
   let queueTimer = null;
+  let submitLock = false;
 
   // -------------------------------------------------------------------------
   // Helpers
@@ -174,6 +175,9 @@
       showReportScreen();
       return;
     }
+    if (currentRecord.status === "syncing" || submitLock) {
+      return;
+    }
     if (!allRequiredComplete()) {
       alert("Please complete every required checklist item before certifying.");
       return;
@@ -199,36 +203,57 @@
   }
 
   /**
-   * Submit or queue. Local record is NEVER deleted until central success.
+   * Submit or queue.
+   * Statuses: draft → offline_pending | syncing → submitted | submission_failed
+   * record.id is the idempotency key. Local data is never removed until
+   * central success is confirmed (then queue entry only is removed; history kept).
    */
   async function submitRecord(record) {
-    if (!record || record.status === "submitted") return record;
-
-    if (!navigator.onLine) {
-      record.status = "offline_pending";
-      record.queuedAt = new Date().toISOString();
-      Storage.enqueue(record);
-      Storage.saveDraft(record);
-      Storage.pushHistory(record);
-      refreshQueueBanner();
-      return record;
-    }
+    if (!record) return record;
+    if (record.status === "submitted") return record;
+    if (submitLock) return record;
+    submitLock = true;
 
     try {
+      // Always persist latest local copy first
+      Storage.saveDraft(record);
+      Storage.pushHistory(record);
+
+      if (!navigator.onLine) {
+        record.status = "offline_pending";
+        record.queuedAt = record.queuedAt || new Date().toISOString();
+        Storage.enqueue(record);
+        Storage.saveDraft(record);
+        Storage.pushHistory(record);
+        refreshQueueBanner();
+        return record;
+      }
+
+      record.status = "syncing";
+      Storage.saveDraft(record);
+      Storage.enqueue(record); // keep local queue copy during attempt
+      Storage.pushHistory(record);
+      refreshQueueBanner();
+      if (currentRecord && currentRecord.id === record.id) {
+        UI.renderMetaBar(currentRecord);
+      }
+
       const res = await API.createChecklist(record);
       if (res.ok) {
         record.status = "submitted";
-        record.submittedAt = (res.data && res.data.submittedAt) || new Date().toISOString();
+        record.submittedAt =
+          (res.data && res.data.submittedAt) || new Date().toISOString();
         record.centralId = (res.data && res.data.centralId) || null;
         record.emailNote = (res.data && res.data.emailNote) || null;
-        // Remove from queue only after confirmed success
+        record.lastError = null;
+        // Remove from retry queue only after confirmed success
         Storage.removeFromQueue(record.id);
         Storage.saveDraft(record);
         Storage.pushHistory(record);
         refreshQueueBanner();
         return record;
       }
-      // Failed but keep local
+
       record.status = "submission_failed";
       record.lastError = res.error || "Submission failed";
       record.queueAttempts = (record.queueAttempts || 0) + 1;
@@ -240,34 +265,50 @@
     } catch (e) {
       record.status = "submission_failed";
       record.lastError = e.message || "Unexpected error";
+      record.queueAttempts = (record.queueAttempts || 0) + 1;
       Storage.enqueue(record);
       Storage.saveDraft(record);
       Storage.pushHistory(record);
       refreshQueueBanner();
       return record;
+    } finally {
+      submitLock = false;
     }
   }
 
   async function processQueue() {
-    if (!navigator.onLine) return;
+    if (!navigator.onLine || submitLock) return;
     const q = Storage.getQueue();
     if (!q.length) {
       refreshQueueBanner();
       return;
     }
+
     for (const entry of q.slice()) {
+      if (!entry || !entry.id) continue;
       if (entry.status === "submitted") {
         Storage.removeFromQueue(entry.id);
         continue;
       }
       if ((entry.queueAttempts || 0) >= Config.QUEUE_MAX_ATTEMPTS) continue;
 
+      entry.status = "syncing";
+      Storage.updateQueueEntry(entry.id, entry);
+      if (currentRecord && currentRecord.id === entry.id) {
+        currentRecord.status = "syncing";
+        Storage.saveDraft(currentRecord);
+        UI.renderMetaBar(currentRecord);
+      }
+      refreshQueueBanner();
+
       const res = await API.createChecklist(entry);
       if (res.ok) {
         entry.status = "submitted";
-        entry.submittedAt = (res.data && res.data.submittedAt) || new Date().toISOString();
+        entry.submittedAt =
+          (res.data && res.data.submittedAt) || new Date().toISOString();
         entry.centralId = (res.data && res.data.centralId) || null;
         entry.emailNote = (res.data && res.data.emailNote) || null;
+        entry.lastError = null;
         Storage.removeFromQueue(entry.id);
         Storage.pushHistory(entry);
         if (currentRecord && currentRecord.id === entry.id) {
@@ -280,6 +321,12 @@
         entry.lastError = res.error || "Retry failed";
         Storage.updateQueueEntry(entry.id, entry);
         Storage.pushHistory(entry);
+        if (currentRecord && currentRecord.id === entry.id) {
+          currentRecord.status = "submission_failed";
+          currentRecord.queueAttempts = entry.queueAttempts;
+          currentRecord.lastError = entry.lastError;
+          Storage.saveDraft(currentRecord);
+        }
       }
     }
     refreshQueueBanner();
@@ -287,7 +334,9 @@
 
   function refreshQueueBanner() {
     const q = Storage.getQueue();
-    const pending = q.filter((r) => r.status === "offline_pending").length;
+    const pending = q.filter(
+      (r) => r.status === "offline_pending" || r.status === "syncing"
+    ).length;
     const failed = q.filter((r) => r.status === "submission_failed").length;
     UI.setQueueBanner(pending, failed);
   }
@@ -338,10 +387,22 @@
   }
 
   function newWalk() {
-    // Keep submitted/queued records in history & queue; only clear active draft
-    if (currentRecord && currentRecord.status === "draft") {
-      Storage.clearDraft();
-    } else if (currentRecord && currentRecord.status === "submitted") {
+    // Never drop unsubmitted work: ensure queue/history hold the latest copy
+    if (currentRecord) {
+      if (
+        currentRecord.status === "offline_pending" ||
+        currentRecord.status === "submission_failed" ||
+        currentRecord.status === "syncing"
+      ) {
+        Storage.enqueue(currentRecord);
+        Storage.pushHistory(currentRecord);
+      } else if (currentRecord.status === "draft") {
+        Storage.saveDraft(currentRecord);
+        Storage.pushHistory(currentRecord);
+      } else if (currentRecord.status === "submitted") {
+        Storage.pushHistory(currentRecord);
+      }
+      // Clear only the "active draft" slot so a new walk can start; queue keeps copies
       Storage.clearDraft();
     }
     currentRecord = null;

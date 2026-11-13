@@ -41,29 +41,35 @@
   // -------------------------------------------------------------------------
   const Mock = {
     async postChecklist(payload) {
-      await delay(400 + Math.random() * 400);
+      await delay(300 + Math.random() * 300);
       const db = S().getMockDb();
-      const id = payload.id;
-      const existing = db.checklists[id];
-      if (existing && existing.status === "submitted") {
-        return { ok: true, status: 200, data: existing, message: "Already submitted" };
+      const id = payload && payload.id;
+      if (!id) {
+        return { ok: false, status: 400, error: "record id required (idempotency key)" };
       }
-      const record = {
-        ...payload,
+      const existing = db.checklists[id];
+      // Idempotency: same recordId already accepted → return stored record, no duplicate
+      if (existing && existing.status === "submitted") {
+        return {
+          ok: true,
+          status: 200,
+          data: existing,
+          message: "Already submitted (idempotent)",
+          duplicate: true,
+        };
+      }
+      const record = Object.assign({}, payload, {
         status: "submitted",
         submittedAt: new Date().toISOString(),
         centralId: "MOCK-" + id,
-        notifyEmail: C().REPORT_NOTIFY_EMAIL,
-        emailQueued: true,
-        emailNote:
-          "Mock: backend would generate PDF and send to " + C().REPORT_NOTIFY_EMAIL,
-      };
+        emailQueued: false,
+        emailNote: "Mock mode: local central store only (no external email).",
+      });
       db.checklists[id] = record;
-      // Extract open issues for admin feed
       const issues = extractIssues(record);
       db.issues = (db.issues || []).filter((i) => i.recordId !== id).concat(issues);
       S().saveMockDb(db);
-      return { ok: true, status: 201, data: record };
+      return { ok: true, status: 201, data: record, duplicate: false };
     },
 
     async getChecklist(recordId) {
@@ -205,7 +211,11 @@
     /** GET /api/checklists/{recordId} */
     async getChecklist(recordId) {
       if (C().MOCK_API) return Mock.getChecklist(recordId);
-      return realFetch("GET", C().ENDPOINTS.CHECKLIST_BY_ID, undefined, null, { recordId });
+      const path = C().ENDPOINTS.CHECKLIST_BY_ID.replace(
+        "{recordId}",
+        encodeURIComponent(recordId)
+      );
+      return realFetch("GET", path);
     },
 
     /** GET /api/checklists?fromDate=&toDate=&type=&manager=&issueStatus= */
@@ -257,9 +267,9 @@
       reportText: record.reportText || "",
       appVersion: C().APP_VERSION,
       clientSubmittedAt: new Date().toISOString(),
-      // Hint for backend notification pipeline (no credentials)
-      notifyEmail: C().REPORT_NOTIFY_EMAIL,
-      requestPdfEmail: true,
+      // Only include notify hint when explicitly configured (never a secret)
+      notifyEmail: C().REPORT_NOTIFY_EMAIL || undefined,
+      requestPdfEmail: !!(C().REPORT_NOTIFY_EMAIL),
       // Reporting dimensions for admin analytics
       reporting: {
         store: "Gulfport",
@@ -287,17 +297,6 @@
     });
     return list;
   }
-
-  // Fix real getChecklist path helper (params object)
-  const _realGet = API.getChecklist;
-  API.getChecklist = async function (recordId) {
-    if (C().MOCK_API) return Mock.getChecklist(recordId);
-    const path = C().ENDPOINTS.CHECKLIST_BY_ID.replace(
-      "{recordId}",
-      encodeURIComponent(recordId)
-    );
-    return realFetch("GET", path);
-  };
 
   global.GPApi = API;
 })(typeof window !== "undefined" ? window : globalThis);
