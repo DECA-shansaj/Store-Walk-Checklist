@@ -405,7 +405,7 @@
       records: [],
       issues: [],
       error: null,
-      sourceLabel: API.isMock() ? "Mock store (this device)" : "Central API",
+      sourceLabel: API.isMock() ? "Local device records only" : "Central API",
     };
     try {
       const res = await API.listChecklists(query);

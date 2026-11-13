@@ -1,25 +1,29 @@
 # Gulfport Store Walk Checklist
 
-Mobile-first PWA for Opening and Closing Managers, with offline queue and optional central API.
+Mobile-first Progressive Web App for Opening and Closing Managers.
 
-**Live client example:** https://deca-shansaj.github.io/Store-Walk-Checklist/
+**Live site:** https://deca-shansaj.github.io/Store-Walk-Checklist/
 
----
+## Current status (ready for store use)
 
-## Phases included
+Works fully **on the device** without IT API approval:
 
-| Phase | What shipped |
-|-------|----------------|
-| **A – Backend** | `backend/` Node API: persist walks, PDF, email adapter, all documented endpoints |
-| **B – Admin UI** | In-app **Admin / Reporting** (filters + open issues) |
-| **C – Production** | `config.js` switch `MOCK_API` / `API_BASE_URL`; health endpoint; CORS via env; no secrets in client |
-| **D – UX** | **Local History**, status badges, empty states, clearer start screen |
+- Opening / Closing manager walks
+- Full checklist + closing end-of-day items
+- Pass / Issue Found / N/A (N/A needs no comments)
+- Remarks, action taken, issue status for issues
+- Certification before complete
+- Progress and open-issue counts
+- Local auto-save drafts
+- Offline after first load
+- Offline submission queue (stored on device until a central API exists)
+- Plain-text report, Copy, Print / Save as PDF
+- Local History
+- Admin view of records stored on this device
 
----
+Central database, PDF email to distribution lists, and shared multi-phone reporting are **deferred** until IT provides an approved host and mail path.
 
-## Client (flat layout for easy GitHub upload)
-
-All client files sit at the **repo root** (no `css/` / `js/` folders required):
+## Files (flat layout at repo root)
 
 ```
 index.html
@@ -34,59 +38,27 @@ app.js
 checklist.json
 manifest.json
 service-worker.js
-backend/          ← optional API server
 ```
 
-### Config (`config.js`)
+Optional later (not required for daily walks):
 
-```js
-MOCK_API: true,           // set false for real API
-API_BASE_URL: "",         // e.g. "http://localhost:3080"
-REPORT_NOTIFY_EMAIL: "deca.lee.store-ops-grp.list.websitez09gulfport@mail.mil"
 ```
-
----
-
-## Backend (Phase A)
-
-```bash
-cd backend
-npm install
-npm start
+backend/     Generic Node API scaffold for when IT approves hosting
 ```
-
-- Default: http://localhost:3080  
-- Health: `GET /api/health`  
-- Email default mode: **log** (safe). SMTP via environment only — see `backend/.env.example`  
-- PDF generated with pdfkit and attached when SMTP is configured  
-
-Point the client at it:
-
-```js
-MOCK_API: false,
-API_BASE_URL: "http://localhost:3080",
-```
-
----
-
-## Security assumptions
-
-- Client has **no** API keys, tokens, or SMTP passwords  
-- Production API sits behind HTTPS and org auth (SSO / mTLS / private network)  
-- Backend validates all input  
-- Records are treated as immutable after central accept  
-
----
-
-## GitHub Pages
-
-- Branch: `main` (or `master`)  
-- Folder: **`/ (root)`**  
-- Upload **all root client files** listed above  
-
----
 
 ## Privacy
 
 Do not enter personal information beyond the required manager name.  
 Do not enter CUI, customer information, cash amounts, sensitive incident details, employee disciplinary information, or unnecessary personal information.
+
+## GitHub Pages
+
+- Branch: main (or master)
+- Folder: / (root)
+- Upload root client files listed above
+
+## After IT approval
+
+1. Host `backend/` (or equivalent) on an approved server  
+2. In `config.js` set `MOCK_API: false` and `API_BASE_URL` to that origin  
+3. Configure approved mail relay on the server only (never in the client)

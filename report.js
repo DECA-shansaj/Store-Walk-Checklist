@@ -69,7 +69,9 @@
     lines.push("--------------------------------");
     lines.push("WARNING: " + WARNING);
     lines.push("--------------------------------");
-    lines.push("Notify email (backend): " + (global.GPConfig && global.GPConfig.REPORT_NOTIFY_EMAIL));
+    if (global.GPApi && !global.GPApi.isMock()) {
+      lines.push("Notify email (backend): " + (global.GPConfig && global.GPConfig.REPORT_NOTIFY_EMAIL));
+    }
     lines.push("Generated: " + new Date().toLocaleString());
     return lines.join("\n");
   }

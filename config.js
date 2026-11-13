@@ -1,7 +1,7 @@
 /**
  * Application configuration
  * ---------------------------------------------------------
- * Phase C: set MOCK_API to false and API_BASE_URL to your API origin for production.
+ * Leave MOCK_API true until IT provides an approved API host. Then set MOCK_API false and API_BASE_URL.
  * No secrets, API keys, tokens, or SMTP passwords belong here.
  */
 (function (global) {
@@ -14,7 +14,7 @@
 
     // Example local: "http://localhost:3080"
     // Example hosted: "https://api.example.mil/store-walk"
-    API_BASE_URL: "",
+    API_BASE_URL: "", // e.g. "https://approved-api.example.mil"
 
     ENDPOINTS: {
       CHECKLISTS: "/api/checklists",
