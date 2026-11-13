@@ -91,7 +91,7 @@
   function isItemComplete(resp) {
     if (!resp || !resp.selection) return false;
     if (resp.selection === "pass") return true;
-    if (resp.selection === "na") return !!(resp.naReason && String(resp.naReason).trim());
+    if (resp.selection === "na") return true; // N/A requires no additional comments
     if (resp.selection === "issue") {
       return !!(
         resp.remarks &&

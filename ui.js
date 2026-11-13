@@ -360,7 +360,7 @@
         className: "conditional" + (resp.selection === "na" ? " visible" : ""),
         "data-for": "na",
       });
-      naBox.appendChild(el("label", { text: "Reason for N/A (required)", for: "nareason-" + item.id }));
+      naBox.appendChild(el("label", { text: "Reason for N/A (optional)", for: "nareason-" + item.id }));
       const naReason = el("textarea", {
         id: "nareason-" + item.id,
         placeholder: "Explain why this item is not applicable…",
